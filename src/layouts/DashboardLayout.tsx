@@ -7,7 +7,6 @@ import {
   Home,
   Users,
   Settings,
-  BarChart2,
 } from "lucide-react";
 
 export const DashboardLayout = () => {
@@ -16,9 +15,8 @@ export const DashboardLayout = () => {
 
   const navItems = [
     { name: "Dashboard", icon: Home, path: "/" },
-    { name: "Users", icon: Users, path: "/users" },
-    { name: "Reports", icon: BarChart2, path: "/reports" },
-    { name: "Settings", icon: Settings, path: "/settings" },
+    { name: "User", icon: Users, path: "/user" },
+    { name: "Settings", icon: Settings, path: "/user/settings" },
   ];
 
   return (
