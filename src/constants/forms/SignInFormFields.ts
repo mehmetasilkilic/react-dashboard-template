@@ -22,4 +22,13 @@ export const SignInFormFields = z.object({
     .max(32, {
       message: "Password must not exceed 32 characters.",
     }),
+
+  rememberMe: z
+    .boolean()
+    .describe("Remember me")
+    .refine((value) => value, {
+      message: "You must accept the terms and conditions.",
+      path: ["rememberMe"],
+    })
+    .optional(),
 });

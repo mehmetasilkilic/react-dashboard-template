@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 // Types
 import { SignInParamProps } from "@/types";
 
@@ -33,10 +35,28 @@ export const SignInForm = ({ handleSignIn }: SignInFormParams) => {
               placeholder: "••••••••",
             },
           },
+          rememberMe: {
+            fieldType: "switch",
+          },
         }}
       >
         <AutoFormSubmit>Sign In</AutoFormSubmit>
       </AutoForm>
+
+      <div className="mt-4 text-sm text-center">
+        <Link
+          to="/auth/forgot-password"
+          className="text-primary hover:underline"
+        >
+          Forgot password?
+        </Link>
+      </div>
+      <div className="mt-2 text-sm text-center">
+        Don't have an account?{" "}
+        <Link to="/auth/sign-up" className="text-primary hover:underline">
+          Sign up
+        </Link>
+      </div>
     </div>
   );
 };
