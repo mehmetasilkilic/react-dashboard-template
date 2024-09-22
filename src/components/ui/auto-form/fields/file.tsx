@@ -1,10 +1,10 @@
 import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
 import { ChangeEvent, useState } from "react";
 import AutoFormLabel from "../common/label";
 import AutoFormTooltip from "../common/tooltip";
 import { AutoFormInputComponentProps } from "../types";
+import { Icon } from "../../icon";
 export default function AutoFormFile({
   label,
   isRequired,
@@ -56,7 +56,7 @@ export default function AutoFormFile({
         <div className="flex h-[40px] w-full flex-row items-center justify-between space-x-2 rounded-sm border p-2 text-black focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-white dark:text-black dark:focus-visible:ring-0 dark:focus-visible:ring-offset-0">
           <p>{fileName}</p>
           <button onClick={handleRemoveClick} aria-label="Remove image">
-            <Trash2 size={16} />
+            <Icon name={"TrashIcon"} />
           </button>
         </div>
       )}
