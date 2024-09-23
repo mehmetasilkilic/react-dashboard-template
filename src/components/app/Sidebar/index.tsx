@@ -6,16 +6,19 @@ import { NavigationItem } from "./NavigationItem";
 import { Logo } from "./Logo";
 
 export const navigation: NavigationItem[] = [
-  { name: "Home", link: "/", icon: "DashboardIcon" },
-  { name: "Users", link: "/users", icon: "DashboardIcon" },
+  { name: "Dashboard", link: "/", icon: "DashboardIcon" },
   {
-    name: "Settings",
-    link: "/settings",
+    name: "User",
+    link: "/user",
     icon: "DashboardIcon",
     nested: [
-      { name: "Home", link: "/", icon: "DashboardIcon" },
-      { name: "Users", link: "/users", icon: "DashboardIcon" },
-      { name: "Settings", link: "/settings", icon: "DashboardIcon" },
+      { name: "Profile", link: "/user", icon: "DashboardIcon" },
+      {
+        name: "Change Password",
+        link: "/user/change-password",
+        icon: "DashboardIcon",
+      },
+      { name: "Settings", link: "/user/settings", icon: "DashboardIcon" },
     ],
   },
 ];

@@ -1,3 +1,3 @@
-const ChangePassword = () => <span>Profile</span>;
+const ChangePassword = () => <span>Change Password</span>;
 
 export default ChangePassword;
