@@ -1,4 +1,3 @@
-"use client";
 import { Form } from "@/components/ui/form";
 import React from "react";
 import { DefaultValues, FormState, useForm } from "react-hook-form";
@@ -104,7 +103,6 @@ function AutoForm<SchemaType extends ZodObjectOrWrapped>({
             dependencies={dependencies}
             fieldConfig={fieldConfig}
           />
-
           {renderChildren}
         </form>
       </Form>
