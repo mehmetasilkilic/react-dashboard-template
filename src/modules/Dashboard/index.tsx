@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SteppedModal } from "@/components/app/Modal";
+import { SteppedModal } from "@/components/app/SteppedModal";
 import { z } from "zod";
 
 const Dashboard = () => {
@@ -26,8 +26,6 @@ const Dashboard = () => {
       content: {
         form: {
           schema: signInSchema,
-          onSubmit: (data: z.infer<typeof signInSchema>) =>
-            console.log("Sign in data:", data),
           fieldConfig: {
             email: {
               inputProps: {
@@ -42,19 +40,6 @@ const Dashboard = () => {
             },
           },
         },
-      },
-    },
-    {
-      title: "Terms and Conditions",
-      content: {
-        content: (
-          <div>
-            <h3>Terms and Conditions</h3>
-            <p>Please read and accept our terms and conditions...</p>
-            <input type="checkbox" id="accept" name="accept" />
-            <label htmlFor="accept">I accept the terms and conditions</label>
-          </div>
-        ),
       },
     },
     {
