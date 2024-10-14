@@ -177,15 +177,31 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
                 key={index}
                 onClick={() => handleStepClick(index)}
                 disabled={index > currentStep && !completedSteps[index - 1]}
-                variant={index === currentStep ? "default" : "outline"}
-                className={`flex-1 mx-1 ${
-                  completedSteps[index] ? "bg-green-500 text-white" : ""
+                variant="ghost"
+                className={`flex-1 flex items-center justify-start p-2 space-x-2 ${
+                  index === currentStep
+                    ? "bg-blue-50 text-blue-700"
+                    : completedSteps[index]
+                      ? "text-green-700"
+                      : "text-gray-500"
                 }`}
               >
-                {step.title}
-                {completedSteps[index] && (
-                  <Icon name="CheckIcon" className="ml-2 h-4 w-4" />
-                )}
+                <span
+                  className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium mr-2 ${
+                    index === currentStep
+                      ? "bg-blue-500 text-white ring-2 ring-blue-200"
+                      : completedSteps[index]
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {completedSteps[index] ? (
+                    <Icon name="CheckIcon" className="h-3 w-3" />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span className="text-sm font-medium">{step.title}</span>
               </Button>
             ))}
           </div>
