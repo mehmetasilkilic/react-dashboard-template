@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useEffect } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import AutoForm from "@/components/ui/auto-form";
+import AutoForm, { AutoFormSubmit } from "@/components/ui/auto-form";
 import { FieldConfig, Dependency } from "@/components/ui/auto-form/types";
 
 interface SteppedModalProps {
@@ -32,14 +32,14 @@ interface SteppedModalProps {
   onSave: (data: any) => void;
 }
 
-export const SteppedModal: React.FC<SteppedModalProps> = ({
+export const SteppedModal = ({
   isOpen,
   onClose,
   title,
   description,
   steps,
   onSave,
-}) => {
+}: SteppedModalProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(
     new Array(steps.length).fill(false)
@@ -48,18 +48,27 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
     new Array(steps.length).fill({})
   );
 
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep(0);
+      setCompletedSteps(new Array(steps.length).fill(false));
+      setFormData(new Array(steps.length).fill({}));
+    }
+  }, [isOpen, steps.length]);
+
   const handleStepComplete = (data: any) => {
     const newFormData = [...formData];
     newFormData[currentStep] = data;
     setFormData(newFormData);
 
+    setCompletedSteps((prev) => {
+      const newCompleted = [...prev];
+      newCompleted[currentStep] = true;
+      return newCompleted;
+    });
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
-      setCompletedSteps((prev) => {
-        const newCompleted = [...prev];
-        newCompleted[currentStep] = true;
-        return newCompleted;
-      });
     } else {
       const allData = newFormData.reduce(
         (acc, curr) => ({ ...acc, ...curr }),
@@ -76,32 +85,35 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
   };
 
   const handleClose = () => {
-    setCurrentStep(0);
-    setCompletedSteps(new Array(steps.length).fill(false));
-    setFormData(new Array(steps.length).fill({}));
     onClose();
   };
 
   const handleStepClick = (index: number) => {
-    if (index < currentStep || completedSteps[index - 1]) {
+    if (index <= currentStep || completedSteps[index - 1]) {
       setCurrentStep(index);
     }
   };
 
-  const renderStepContent = (step: SteppedModalProps["steps"][number]) => {
+  const renderStepContent = (
+    step: SteppedModalProps["steps"][number],
+    stepIndex: number
+  ) => {
     if (step.content.form) {
       return (
         <AutoForm
           formSchema={step.content.form.schema}
-          onSubmit={(data) => {
-            step.content.form?.onSubmit?.(data);
-            handleStepComplete(data);
-          }}
+          onSubmit={handleStepComplete}
           fieldConfig={step.content.form.fieldConfig}
           dependencies={step.content.form.dependencies}
+          values={formData[stepIndex]}
+          onValuesChange={(values) => {
+            const newFormData = [...formData];
+            newFormData[stepIndex] = values;
+            setFormData(newFormData);
+          }}
         >
           <div className="flex justify-end mt-6">
-            {currentStep > 0 && (
+            {stepIndex > 0 && (
               <Button
                 type="button"
                 onClick={handlePrevious}
@@ -112,8 +124,8 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
                 Previous
               </Button>
             )}
-            <Button type="submit">
-              {currentStep === steps.length - 1 ? (
+            <AutoFormSubmit>
+              {stepIndex === steps.length - 1 ? (
                 <>
                   Save
                   <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
@@ -124,7 +136,7 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
                   <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
                 </>
               )}
-            </Button>
+            </AutoFormSubmit>
           </div>
         </AutoForm>
       );
@@ -135,14 +147,14 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
           <div className="flex justify-between mt-6">
             <Button
               onClick={handlePrevious}
-              disabled={currentStep === 0}
+              disabled={stepIndex === 0}
               variant="outline"
             >
               <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
               Previous
             </Button>
-            <Button onClick={() => handleStepComplete({})}>
-              {currentStep === steps.length - 1 ? (
+            <Button onClick={() => handleStepComplete(formData[stepIndex])}>
+              {stepIndex === steps.length - 1 ? (
                 <>
                   Save
                   <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
@@ -207,7 +219,7 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
           </div>
         )}
         <div className="bg-gray-50 p-6 rounded-lg">
-          {renderStepContent(steps[currentStep])}
+          {renderStepContent(steps[currentStep], currentStep)}
         </div>
       </DialogContent>
     </Dialog>

@@ -26,7 +26,8 @@ const Dashboard = () => {
       content: {
         form: {
           schema: signInSchema,
-          onSubmit: (data) => console.log("Sign in data:", data),
+          onSubmit: (data: z.infer<typeof signInSchema>) =>
+            console.log("Sign in data:", data),
           fieldConfig: {
             email: {
               inputProps: {
@@ -61,7 +62,8 @@ const Dashboard = () => {
       content: {
         form: {
           schema: additionalInfoSchema,
-          onSubmit: (data) => console.log("Additional info:", data),
+          onSubmit: (data: z.infer<typeof additionalInfoSchema>) =>
+            console.log("Additional info:", data),
         },
       },
     },
