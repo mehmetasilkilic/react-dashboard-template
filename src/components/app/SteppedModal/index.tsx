@@ -55,7 +55,6 @@ export const SteppedModal = ({
       setFormData(new Array(steps.length).fill({}));
     }
   }, [isOpen, steps.length]);
-
   const handleStepComplete = (data: any) => {
     const newFormData = [...formData];
     newFormData[currentStep] = data;
@@ -176,6 +175,13 @@ export const SteppedModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
+        <Button
+          variant={"ghost"}
+          onClick={() => {}}
+          className="absolute right-4 top-4"
+        >
+          <Icon name={"Cross1Icon"} className="h-4 w-4" />
+        </Button>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
           <DialogDescription className="text-gray-500">
