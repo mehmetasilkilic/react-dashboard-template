@@ -1,5 +1,7 @@
 import { useState, ReactNode, useCallback } from "react";
 import { z } from "zod";
+
+// Global Components
 import {
   Dialog,
   DialogContent,
@@ -45,13 +47,13 @@ export const SteppedModal = ({
   onSave,
 }: SteppedModalProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
   const [formData, setFormData] = useState<any[]>([]);
+  const [validSteps, setValidSteps] = useState<boolean[]>([]);
 
   const resetModal = useCallback(() => {
     setCurrentStep(0);
-    setCompletedSteps(new Array(steps.length).fill(false));
     setFormData(new Array(steps.length).fill({}));
+    setValidSteps(new Array(steps.length).fill(false));
   }, [steps.length]);
 
   const handleClose = useCallback(() => {
@@ -63,6 +65,17 @@ export const SteppedModal = ({
     onClose();
   }, [resetModal, onClose]);
 
+  const validateStep = useCallback(
+    (stepIndex: number, data: any) => {
+      const step = steps[stepIndex];
+      if (step.content.form && step.content.form.schema) {
+        return step.content.form.schema.safeParse(data).success;
+      }
+      return true; // If there's no form schema, consider the step valid
+    },
+    [steps]
+  );
+
   const handleStepComplete = useCallback(
     (data: any) => {
       setFormData((prev) => {
@@ -71,10 +84,10 @@ export const SteppedModal = ({
         return newFormData;
       });
 
-      setCompletedSteps((prev) => {
-        const newCompleted = [...prev];
-        newCompleted[currentStep] = true;
-        return newCompleted;
+      setValidSteps((prev) => {
+        const newValidSteps = [...prev];
+        newValidSteps[currentStep] = true;
+        return newValidSteps;
       });
 
       if (currentStep < steps.length - 1) {
@@ -98,11 +111,12 @@ export const SteppedModal = ({
 
   const handleStepClick = useCallback(
     (index: number) => {
-      if (index <= currentStep || completedSteps[index - 1]) {
+      // Allow navigation to this step if all previous steps are valid
+      if (index === 0 || validSteps.slice(0, index).every(Boolean)) {
         setCurrentStep(index);
       }
     },
-    [currentStep, completedSteps]
+    [validSteps]
   );
 
   const renderStepContent = (step: Step, stepIndex: number) => {
@@ -119,6 +133,11 @@ export const SteppedModal = ({
               const newFormData = [...prev];
               newFormData[stepIndex] = values;
               return newFormData;
+            });
+            setValidSteps((prev) => {
+              const newValidSteps = [...prev];
+              newValidSteps[stepIndex] = validateStep(stepIndex, values);
+              return newValidSteps;
             });
           }}
         >
@@ -210,18 +229,20 @@ export const SteppedModal = ({
                 >
                   <Button
                     onClick={() => handleStepClick(index)}
-                    disabled={index > currentStep && !completedSteps[index - 1]}
+                    disabled={
+                      index > 0 && !validSteps.slice(0, index).every(Boolean)
+                    }
                     variant="ghost"
-                    className={`flex items-center justify-start w-full ${
+                    className={`flex items-center justify-start w-full space-x-2 ${
                       index === currentStep
-                        ? "text-blue-600"
-                        : completedSteps[index]
-                          ? "text-green-600"
+                        ? "bg-blue-50 text-blue-700"
+                        : validSteps[index]
+                          ? "text-green-700"
                           : "text-gray-500"
                     }`}
                   >
                     <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-300">
-                      {completedSteps[index] ? (
+                      {validSteps[index] ? (
                         <Icon
                           name="CheckIcon"
                           className="w-5 h-5 text-green-600"
@@ -240,7 +261,7 @@ export const SteppedModal = ({
             </ol>
           </nav>
         )}
-        <div className="bg-gray-50 p-6 rounded-lg mt-6">
+        <div className="bg-gray-50 p-6 rounded-lg">
           {renderStepContent(steps[currentStep], currentStep)}
         </div>
       </DialogContent>
