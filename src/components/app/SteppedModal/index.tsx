@@ -1,5 +1,6 @@
-import { useState, ReactNode, useCallback } from "react";
+import { useState, ReactNode, useCallback, useRef, useEffect } from "react";
 import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Global Components
 import {
@@ -38,20 +39,74 @@ interface SteppedModalProps {
   onSave: (data: any) => void;
 }
 
-export const SteppedModal = ({
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? "100%" : "-100%",
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? "100%" : "-100%",
+    opacity: 0,
+  }),
+};
+
+const contentVariants = {
+  hidden: { opacity: 0, height: 0 },
+  visible: {
+    opacity: 1,
+    height: "auto",
+    transition: {
+      height: {
+        type: "spring",
+        stiffness: 500,
+        damping: 30,
+      },
+      opacity: {
+        duration: 0.2,
+      },
+    },
+  },
+  exit: {
+    opacity: 0,
+    height: 0,
+    transition: {
+      height: {
+        type: "spring",
+        stiffness: 500,
+        damping: 30,
+      },
+      opacity: {
+        duration: 0.2,
+      },
+    },
+  },
+};
+
+export const SteppedModal: React.FC<SteppedModalProps> = ({
   isOpen,
   onClose,
   title,
   description,
   steps,
   onSave,
-}: SteppedModalProps) => {
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [direction, setDirection] = useState(0);
   const [formData, setFormData] = useState<any[]>([]);
   const [validSteps, setValidSteps] = useState<boolean[]>([]);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    stepRefs.current = stepRefs.current.slice(0, steps.length);
+  }, [steps]);
 
   const resetModal = useCallback(() => {
     setCurrentStep(0);
+    setDirection(0);
     setFormData(new Array(steps.length).fill({}));
     setValidSteps(new Array(steps.length).fill(false));
   }, [steps.length]);
@@ -91,6 +146,7 @@ export const SteppedModal = ({
       });
 
       if (currentStep < steps.length - 1) {
+        setDirection(1);
         setCurrentStep((prev) => prev + 1);
       } else {
         const allData = formData.reduce(
@@ -105,6 +161,7 @@ export const SteppedModal = ({
 
   const handlePrevious = useCallback(() => {
     if (currentStep > 0) {
+      setDirection(-1);
       setCurrentStep((prev) => prev - 1);
     }
   }, [currentStep]);
@@ -113,93 +170,107 @@ export const SteppedModal = ({
     (index: number) => {
       // Allow navigation to this step if all previous steps are valid
       if (index === 0 || validSteps.slice(0, index).every(Boolean)) {
+        setDirection(index > currentStep ? 1 : -1);
         setCurrentStep(index);
       }
     },
-    [validSteps]
+    [validSteps, currentStep]
   );
 
   const renderStepContent = (step: Step, stepIndex: number) => {
-    if (step.content.form) {
-      return (
-        <AutoForm
-          formSchema={step.content.form.schema}
-          onSubmit={handleStepComplete}
-          fieldConfig={step.content.form.fieldConfig}
-          dependencies={step.content.form.dependencies}
-          values={formData[stepIndex]}
-          onValuesChange={(values) => {
-            setFormData((prev) => {
-              const newFormData = [...prev];
-              newFormData[stepIndex] = values;
-              return newFormData;
-            });
-            setValidSteps((prev) => {
-              const newValidSteps = [...prev];
-              newValidSteps[stepIndex] = validateStep(stepIndex, values);
-              return newValidSteps;
-            });
-          }}
-        >
-          <div className="flex justify-end mt-6">
-            {stepIndex > 0 && (
-              <Button
-                type="button"
-                onClick={handlePrevious}
-                variant="outline"
-                className="mr-auto"
-              >
-                <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
-                Previous
-              </Button>
-            )}
-            <AutoFormSubmit>
-              {stepIndex === steps.length - 1 ? (
-                <>
-                  Save
-                  <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  Next
-                  <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </AutoFormSubmit>
-          </div>
-        </AutoForm>
-      );
-    } else if (step.content.content) {
-      return (
-        <>
-          {step.content.content}
-          <div className="flex justify-between mt-6">
+    const content = step.content.form ? (
+      <AutoForm
+        formSchema={step.content.form.schema}
+        onSubmit={handleStepComplete}
+        fieldConfig={step.content.form.fieldConfig}
+        dependencies={step.content.form.dependencies}
+        values={formData[stepIndex]}
+        onValuesChange={(values) => {
+          setFormData((prev) => {
+            const newFormData = [...prev];
+            newFormData[stepIndex] = values;
+            return newFormData;
+          });
+          setValidSteps((prev) => {
+            const newValidSteps = [...prev];
+            newValidSteps[stepIndex] = validateStep(stepIndex, values);
+            return newValidSteps;
+          });
+        }}
+      >
+        <div className="flex justify-end mt-6">
+          {stepIndex > 0 && (
             <Button
+              type="button"
               onClick={handlePrevious}
-              disabled={stepIndex === 0}
               variant="outline"
+              className="mr-auto"
             >
               <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
               Previous
             </Button>
-            <Button onClick={() => handleStepComplete(formData[stepIndex])}>
-              {stepIndex === steps.length - 1 ? (
-                <>
-                  Save
-                  <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
-                </>
-              ) : (
-                <>
-                  Next
-                  <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
-                </>
-              )}
-            </Button>
-          </div>
-        </>
-      );
-    }
-    return null;
+          )}
+          <AutoFormSubmit>
+            {stepIndex === steps.length - 1 ? (
+              <>
+                Save
+                <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Next
+                <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </AutoFormSubmit>
+        </div>
+      </AutoForm>
+    ) : step.content.content ? (
+      <>
+        {step.content.content}
+        <div className="flex justify-between mt-6">
+          <Button
+            onClick={handlePrevious}
+            disabled={stepIndex === 0}
+            variant="outline"
+          >
+            <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
+            Previous
+          </Button>
+          <Button onClick={() => handleStepComplete(formData[stepIndex])}>
+            {stepIndex === steps.length - 1 ? (
+              <>
+                Save
+                <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Next
+                <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+      </>
+    ) : null;
+
+    return (
+      <motion.div
+        ref={(el) => (stepRefs.current[stepIndex] = el)}
+        key={stepIndex}
+        custom={direction}
+        variants={stepVariants}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={{
+          x: { type: "spring", stiffness: 300, damping: 30 },
+          opacity: { duration: 0.2 },
+        }}
+      >
+        {content}
+      </motion.div>
+    );
   };
 
   return (
@@ -261,9 +332,20 @@ export const SteppedModal = ({
             </ol>
           </nav>
         )}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          {renderStepContent(steps[currentStep], currentStep)}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            variants={contentVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="bg-gray-50 rounded-lg overflow-hidden"
+          >
+            <div className="p-6">
+              {renderStepContent(steps[currentStep], currentStep)}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );

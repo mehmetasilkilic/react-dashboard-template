@@ -18,6 +18,9 @@ const Dashboard = () => {
   const additionalInfoSchema = z.object({
     name: z.string().min(2),
     age: z.number().min(18),
+    ages: z.number().min(18),
+    agess: z.number().min(18),
+    agesss: z.number().min(18),
   });
 
   const steps = [
