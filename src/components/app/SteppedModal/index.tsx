@@ -1,4 +1,4 @@
-import { useState, ReactNode, useEffect } from "react";
+import { useState, ReactNode, useCallback } from "react";
 import { z } from "zod";
 import {
   Dialog,
@@ -12,23 +12,27 @@ import { Icon } from "@/components/ui/icon";
 import AutoForm, { AutoFormSubmit } from "@/components/ui/auto-form";
 import { FieldConfig, Dependency } from "@/components/ui/auto-form/types";
 
+interface StepContent {
+  form?: {
+    schema: z.ZodObject<any>;
+    onSubmit?: (values: any) => void;
+    fieldConfig?: FieldConfig<any>;
+    dependencies?: Dependency<any>[];
+  };
+  content?: ReactNode;
+}
+
+interface Step {
+  title: string;
+  content: StepContent;
+}
+
 interface SteppedModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   description: string;
-  steps: {
-    title: string;
-    content: {
-      form?: {
-        schema: z.ZodObject<any>;
-        onSubmit?: (values: any) => void;
-        fieldConfig?: FieldConfig<any>;
-        dependencies?: Dependency<any>[];
-      };
-      content?: ReactNode;
-    };
-  }[];
+  steps: Step[];
   onSave: (data: any) => void;
 }
 
@@ -41,62 +45,67 @@ export const SteppedModal = ({
   onSave,
 }: SteppedModalProps) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [completedSteps, setCompletedSteps] = useState<boolean[]>(
-    new Array(steps.length).fill(false)
-  );
-  const [formData, setFormData] = useState<any[]>(
-    new Array(steps.length).fill({})
-  );
+  const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
+  const [formData, setFormData] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setCurrentStep(0);
-      setCompletedSteps(new Array(steps.length).fill(false));
-      setFormData(new Array(steps.length).fill({}));
-    }
-  }, [isOpen, steps.length]);
-  const handleStepComplete = (data: any) => {
-    const newFormData = [...formData];
-    newFormData[currentStep] = data;
-    setFormData(newFormData);
+  const resetModal = useCallback(() => {
+    setCurrentStep(0);
+    setCompletedSteps(new Array(steps.length).fill(false));
+    setFormData(new Array(steps.length).fill({}));
+  }, [steps.length]);
 
-    setCompletedSteps((prev) => {
-      const newCompleted = [...prev];
-      newCompleted[currentStep] = true;
-      return newCompleted;
-    });
-
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      const allData = newFormData.reduce(
-        (acc, curr) => ({ ...acc, ...curr }),
-        {}
-      );
-      onSave(allData);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     onClose();
-  };
+  }, [onClose]);
 
-  const handleStepClick = (index: number) => {
-    if (index <= currentStep || completedSteps[index - 1]) {
-      setCurrentStep(index);
+  const handleXButtonClick = useCallback(() => {
+    resetModal();
+    onClose();
+  }, [resetModal, onClose]);
+
+  const handleStepComplete = useCallback(
+    (data: any) => {
+      setFormData((prev) => {
+        const newFormData = [...prev];
+        newFormData[currentStep] = data;
+        return newFormData;
+      });
+
+      setCompletedSteps((prev) => {
+        const newCompleted = [...prev];
+        newCompleted[currentStep] = true;
+        return newCompleted;
+      });
+
+      if (currentStep < steps.length - 1) {
+        setCurrentStep((prev) => prev + 1);
+      } else {
+        const allData = formData.reduce(
+          (acc, curr) => ({ ...acc, ...curr }),
+          {}
+        );
+        onSave(allData);
+      }
+    },
+    [currentStep, steps.length, formData, onSave]
+  );
+
+  const handlePrevious = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
     }
-  };
+  }, [currentStep]);
 
-  const renderStepContent = (
-    step: SteppedModalProps["steps"][number],
-    stepIndex: number
-  ) => {
+  const handleStepClick = useCallback(
+    (index: number) => {
+      if (index <= currentStep || completedSteps[index - 1]) {
+        setCurrentStep(index);
+      }
+    },
+    [currentStep, completedSteps]
+  );
+
+  const renderStepContent = (step: Step, stepIndex: number) => {
     if (step.content.form) {
       return (
         <AutoForm
@@ -106,9 +115,11 @@ export const SteppedModal = ({
           dependencies={step.content.form.dependencies}
           values={formData[stepIndex]}
           onValuesChange={(values) => {
-            const newFormData = [...formData];
-            newFormData[stepIndex] = values;
-            setFormData(newFormData);
+            setFormData((prev) => {
+              const newFormData = [...prev];
+              newFormData[stepIndex] = values;
+              return newFormData;
+            });
           }}
         >
           <div className="flex justify-end mt-6">
@@ -176,11 +187,12 @@ export const SteppedModal = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
         <Button
-          variant={"ghost"}
-          onClick={() => {}}
+          variant="ghost"
+          onClick={handleXButtonClick}
           className="absolute right-4 top-4"
+          aria-label="Close dialog"
         >
-          <Icon name={"Cross1Icon"} className="h-4 w-4" />
+          <Icon name="Cross1Icon" className="h-4 w-4" />
         </Button>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
@@ -189,42 +201,46 @@ export const SteppedModal = ({
           </DialogDescription>
         </DialogHeader>
         {steps.length > 1 && (
-          <div className="flex items-center">
-            {steps.map((step, index) => (
-              <Button
-                key={index}
-                onClick={() => handleStepClick(index)}
-                disabled={index > currentStep && !completedSteps[index - 1]}
-                variant="ghost"
-                className={`flex-1 flex items-center justify-start p-2 space-x-2 ${
-                  index === currentStep
-                    ? "bg-blue-50 text-blue-700"
-                    : completedSteps[index]
-                      ? "text-green-700"
-                      : "text-gray-500"
-                }`}
-              >
-                <span
-                  className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium mr-2 ${
-                    index === currentStep
-                      ? "bg-blue-500 text-white ring-2 ring-blue-200"
-                      : completedSteps[index]
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-600"
-                  }`}
+          <nav aria-label="Progress">
+            <ol role="list" className="flex items-center">
+              {steps.map((step, index) => (
+                <li
+                  key={step.title}
+                  className={`flex-1 ${index !== steps.length - 1 ? "pr-8 sm:pr-20" : ""}`}
                 >
-                  {completedSteps[index] ? (
-                    <Icon name="CheckIcon" className="h-3 w-3" />
-                  ) : (
-                    index + 1
-                  )}
-                </span>
-                <span className="text-sm font-medium">{step.title}</span>
-              </Button>
-            ))}
-          </div>
+                  <Button
+                    onClick={() => handleStepClick(index)}
+                    disabled={index > currentStep && !completedSteps[index - 1]}
+                    variant="ghost"
+                    className={`flex items-center justify-start w-full ${
+                      index === currentStep
+                        ? "text-blue-600"
+                        : completedSteps[index]
+                          ? "text-green-600"
+                          : "text-gray-500"
+                    }`}
+                  >
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-300">
+                      {completedSteps[index] ? (
+                        <Icon
+                          name="CheckIcon"
+                          className="w-5 h-5 text-green-600"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span className="text-sm font-medium">{index + 1}</span>
+                      )}
+                    </span>
+                    <span className="ml-4 text-sm font-medium">
+                      {step.title}
+                    </span>
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          </nav>
         )}
-        <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="bg-gray-50 p-6 rounded-lg mt-6">
           {renderStepContent(steps[currentStep], currentStep)}
         </div>
       </DialogContent>
