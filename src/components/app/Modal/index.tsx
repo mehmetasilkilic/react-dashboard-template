@@ -16,6 +16,7 @@ interface SteppedModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  description: string;
   steps: {
     title: string;
     content: {
@@ -31,13 +32,14 @@ interface SteppedModalProps {
   onSave: (data: any) => void;
 }
 
-export const SteppedModal = ({
+export const SteppedModal: React.FC<SteppedModalProps> = ({
   isOpen,
   onClose,
   title,
+  description,
   steps,
   onSave,
-}: SteppedModalProps) => {
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<boolean[]>(
     new Array(steps.length).fill(false)
@@ -80,6 +82,12 @@ export const SteppedModal = ({
     onClose();
   };
 
+  const handleStepClick = (index: number) => {
+    if (index < currentStep || completedSteps[index - 1]) {
+      setCurrentStep(index);
+    }
+  };
+
   const renderStepContent = (step: SteppedModalProps["steps"][number]) => {
     if (step.content.form) {
       return (
@@ -92,18 +100,30 @@ export const SteppedModal = ({
           fieldConfig={step.content.form.fieldConfig}
           dependencies={step.content.form.dependencies}
         >
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-6">
             {currentStep > 0 && (
               <Button
                 type="button"
                 onClick={handlePrevious}
+                variant="outline"
                 className="mr-auto"
               >
+                <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
                 Previous
               </Button>
             )}
             <Button type="submit">
-              {currentStep === steps.length - 1 ? "Save" : "Next"}
+              {currentStep === steps.length - 1 ? (
+                <>
+                  Save
+                  <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         </AutoForm>
@@ -112,12 +132,27 @@ export const SteppedModal = ({
       return (
         <>
           {step.content.content}
-          <div className="flex justify-between mt-4">
-            <Button onClick={handlePrevious} disabled={currentStep === 0}>
+          <div className="flex justify-between mt-6">
+            <Button
+              onClick={handlePrevious}
+              disabled={currentStep === 0}
+              variant="outline"
+            >
+              <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
               Previous
             </Button>
             <Button onClick={() => handleStepComplete({})}>
-              {currentStep === steps.length - 1 ? "Save" : "Next"}
+              {currentStep === steps.length - 1 ? (
+                <>
+                  Save
+                  <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
           </div>
         </>
@@ -128,36 +163,34 @@ export const SteppedModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]" aria-describedby="A">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>Register a new user</DialogDescription>
+          <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
+          <DialogDescription className="text-gray-500">
+            {description}
+          </DialogDescription>
         </DialogHeader>
-        {steps.length > 1 ? (
-          <div className="flex items-center justify-between">
+        {steps.length > 1 && (
+          <div className="flex items-center">
             {steps.map((step, index) => (
-              <div key={index} className="flex items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    index === currentStep
-                      ? "bg-blue-500 text-white"
-                      : completedSteps[index]
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200"
-                  }`}
-                >
-                  {completedSteps[index] ? (
-                    <Icon name="CheckCircledIcon" className="h-5 w-5" />
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                <span className="ml-2 text-sm font-medium">{step.title}</span>
-              </div>
+              <Button
+                key={index}
+                onClick={() => handleStepClick(index)}
+                disabled={index > currentStep && !completedSteps[index - 1]}
+                variant={index === currentStep ? "default" : "outline"}
+                className={`flex-1 mx-1 ${
+                  completedSteps[index] ? "bg-green-500 text-white" : ""
+                }`}
+              >
+                {step.title}
+                {completedSteps[index] && (
+                  <Icon name="CheckIcon" className="ml-2 h-4 w-4" />
+                )}
+              </Button>
             ))}
           </div>
-        ) : null}
-        <div className="grid gap-4">
+        )}
+        <div className="bg-gray-50 p-6 rounded-lg">
           {renderStepContent(steps[currentStep])}
         </div>
       </DialogContent>

@@ -74,6 +74,7 @@ const Dashboard = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="User Registration"
+        description="Complete the steps below to register a new user"
         steps={steps}
         onSave={handleSave}
       />
