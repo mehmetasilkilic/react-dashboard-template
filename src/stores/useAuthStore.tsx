@@ -9,7 +9,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      isSignedIn: false,
+      isSignedIn: true,
       setIsSignedIn: (val) => set({ isSignedIn: val }),
     }),
     {

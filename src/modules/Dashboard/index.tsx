@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SteppedModal } from "@/components/app/SteppedModal";
 import { z } from "zod";
+import { UserTable } from "./table";
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,6 +69,7 @@ const Dashboard = () => {
         steps={steps}
         onSave={handleSave}
       />
+      <UserTable />
     </div>
   );
 };
