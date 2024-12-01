@@ -3,9 +3,21 @@ import { Sidebar } from "@/components/app/Sidebar";
 import { Icon } from "@/components/ui/icon";
 import { DraggableTabs } from "@/components/app/Tab/Tab";
 import { useTabNavigation } from "@/components/app/Tab/tabHook";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const DashboardLayout = () => {
   useTabNavigation();
+
+  const handleSignOut = () => {
+    sessionStorage.removeItem("authToken");
+
+    window.location.href = "/auth/sign-in";
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -16,21 +28,29 @@ export const DashboardLayout = () => {
             <DraggableTabs />
 
             <div className="flex items-center ml-3">
-              <button className="flex items-center">
-                <img
-                  className="h-8 w-8 rounded-full"
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                  alt=""
-                />
-
-                <Icon name={"ChevronDownIcon"} className="ml-1" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center">
+                    <img
+                      className="h-8 w-8 rounded-full"
+                      src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png"
+                      alt="User avatar"
+                    />
+                    <Icon name="ChevronDownIcon" className="ml-1" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    Çıkış Yap
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-200">
-          <div className="container mx-auto px-6 py-8">
+          <div className="container mx-auto py-4">
             <Outlet />
           </div>
         </main>
