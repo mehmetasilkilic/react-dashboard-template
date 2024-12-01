@@ -14,7 +14,6 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useNavigate } from "react-router-dom";
 
 // Store
 import { useTabStore } from "@/stores/useTabStore";
@@ -22,22 +21,13 @@ import { useTabStore } from "@/stores/useTabStore";
 // Global Components
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-
-const titleSeparator = (title: string) => {
-  const parts = title.split("/");
-  const p = parts[parts.length - 1]
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
-  return p || "Dashboard";
-};
+import { useTabNavigation } from "./tabHook";
 
 const SortableTab = ({ id }: { id: string }) => {
-  const { tabs, removeTab, activeTabId, setActiveTab } = useTabStore();
+  const { tabs, activeTabId, setActiveTab } = useTabStore();
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id });
-  const navigate = useNavigate();
+  const { navigate, wrappedRemoveTab } = useTabNavigation();
 
   const tab = tabs.find((tab) => tab.id === id);
   if (!tab) return null;
@@ -50,6 +40,21 @@ const SortableTab = ({ id }: { id: string }) => {
   const handleTabClick = () => {
     setActiveTab(id);
     navigate(tab.path);
+  };
+
+  const handleCloseTab = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isActive = activeTabId === id;
+    const currentIndex = tabs.findIndex((t) => t.id === id);
+    const newIndex = currentIndex === 0 ? 1 : currentIndex - 1;
+
+    if (isActive && tabs.length > 1) {
+      const newActiveTab = tabs[newIndex];
+      setActiveTab(newActiveTab.id);
+      navigate(newActiveTab.path);
+    }
+
+    wrappedRemoveTab(id);
   };
 
   return (
@@ -66,15 +71,14 @@ const SortableTab = ({ id }: { id: string }) => {
         className="h-full gap-2 pl-1.5 pr-3 text-xs py-2"
         onClick={handleTabClick}
       >
-        <span>{titleSeparator(tab.title)}</span>
-        <Icon
-          name={"Cross1Icon"}
-          className="h-3 w-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            removeTab(id);
-          }}
-        />
+        <span>{tab.title}</span>
+        {tabs.length > 1 && (
+          <Icon
+            name="Cross1Icon"
+            className="h-3 w-3"
+            onClick={handleCloseTab}
+          />
+        )}
       </Button>
     </div>
   );

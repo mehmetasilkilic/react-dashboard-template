@@ -20,6 +20,13 @@ export const useTabStore = create<TabState>((set) => ({
   activeTabId: null,
   addTab: (tab) =>
     set((state) => {
+      if (tab.path === "/") {
+        return {
+          tabs: state.tabs,
+          activeTabId: state.activeTabId,
+        };
+      }
+
       const existingTab = state.tabs.find((t) => t.path === tab.path);
       if (existingTab) {
         return { activeTabId: existingTab.id };

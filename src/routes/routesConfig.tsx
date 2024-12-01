@@ -11,7 +11,6 @@ import {
   Profile,
   Settings,
   SignIn,
-  SignUp,
 } from "./lazyWrappers";
 import ProtectedRoutes from "./ProtectedRoutes";
 import NotFound from "../NotFound";
@@ -42,7 +41,6 @@ export const routesConfig: RouteObject[] = [
     element: <AuthLayout />,
     children: [
       { path: "sign-in", element: <SignIn /> },
-      { path: "sign-up", element: <SignUp /> },
       { path: "forgot-password", element: <ForgotPassword /> },
     ],
   },

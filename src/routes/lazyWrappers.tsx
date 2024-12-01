@@ -2,7 +2,6 @@ import { lazy } from "react";
 
 // Auth
 export const SignIn = lazy(() => import("../modules/Auth/SignIn"));
-export const SignUp = lazy(() => import("../modules/Auth/SignUp"));
 export const ForgotPassword = lazy(() => import("../modules/Auth/ForgotPassword"));
 
 // User
