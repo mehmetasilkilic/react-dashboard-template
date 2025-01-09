@@ -5,6 +5,7 @@ export type FieldType =
   | "text"
   | "number"
   | "email"
+  | "password"
   | "select"
   | "checkbox"
   | "textarea"
@@ -25,10 +26,10 @@ export interface BaseField {
 }
 
 export interface TextFieldProps extends BaseField {
-  type: "text" | "email" | "number";
+  type: "text" | "email" | "number" | "password";
   validation?: z.ZodString | z.ZodNumber;
 }
-
+""
 export interface SelectFieldProps extends BaseField {
   type: "select";
   options: SelectOption[];

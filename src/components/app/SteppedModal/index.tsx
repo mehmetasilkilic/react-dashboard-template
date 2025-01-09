@@ -1,34 +1,24 @@
-import React, {
-  useState,
-  ReactNode,
-  useCallback,
-  useRef,
-  useEffect,
-} from "react";
-import { z } from "zod";
+import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
-import AutoForm, { AutoFormSubmit } from "@/components/ui/auto-form";
-import { FieldConfig, Dependency } from "@/components/ui/auto-form/types";
+import { FormBuilder } from "../FormBuilder";
+import { FormField, FormSchema } from "../FormBuilder/types";
 
-// Types
 type StepContent = {
   form?: {
-    schema: z.ZodObject<any>;
-    onSubmit?: (values: any) => void;
-    fieldConfig?: FieldConfig<any>;
-    dependencies?: Dependency<any>[];
+    fields: FormField[];
+    schema?: FormSchema;
     defaultValues?: Record<string, any>;
   };
-  content?: ReactNode;
+  content?: React.ReactNode;
 };
 
 type Step = {
@@ -36,7 +26,7 @@ type Step = {
   content: StepContent;
 };
 
-type SteppedModalProps = {
+interface SteppedModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
@@ -44,12 +34,11 @@ type SteppedModalProps = {
   steps: Step[];
   onSave: (data: any) => Promise<void>;
   defaultValues?: Record<string, any>[];
-};
+}
 
-// Animation variants
-const stepVariants = {
+const slideVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? "100%" : "-100%",
+    x: direction > 0 ? 100 : -100,
     opacity: 0,
   }),
   center: {
@@ -57,72 +46,27 @@ const stepVariants = {
     opacity: 1,
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? "100%" : "-100%",
+    x: direction < 0 ? 100 : -100,
     opacity: 0,
   }),
 };
 
-const contentVariants = {
-  hidden: { opacity: 0, height: 0 },
-  visible: {
-    opacity: 1,
-    height: "auto",
-    transition: {
-      height: { type: "spring", stiffness: 500, damping: 30 },
-      opacity: { duration: 0.2 },
-    },
-  },
-  exit: {
-    opacity: 0,
-    height: 0,
-    transition: {
-      height: { type: "spring", stiffness: 500, damping: 30 },
-      opacity: { duration: 0.2 },
-    },
-  },
-};
-
-// Hooks
-const useSteppedModal = (
-  steps: Step[],
-  defaultValues: Record<string, any>[],
-  onSave: (data: any) => Promise<void>
-) => {
+export function SteppedModal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  steps,
+  onSave,
+  defaultValues = [],
+}: SteppedModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
-  const [formData, setFormData] = useState<any[]>([]);
-  const [validSteps, setValidSteps] = useState<boolean[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    setFormData((prevFormData) => {
-      return steps.map((step, index) => ({
-        ...defaultValues[index],
-        ...(step.content.form?.defaultValues || {}),
-        ...(prevFormData[index] || {}),
-      }));
-    });
-
-    setValidSteps((prevValidSteps) => {
-      if (prevValidSteps.length !== steps.length) {
-        return new Array(steps.length).fill(false);
-      }
-      return prevValidSteps;
-    });
-  }, [steps, defaultValues]);
-
-  useEffect(() => {
-    stepRefs.current = stepRefs.current.slice(0, steps.length);
-  }, [steps]);
-
-  const resetModal = useCallback(() => {
-    setCurrentStep(0);
-    setDirection(0);
-    setFormData([]);
-    setValidSteps(new Array(steps.length).fill(false));
-    setIsLoading(false);
-  }, [steps]);
+  const [formData, setFormData] = useState(defaultValues);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validSteps, setValidSteps] = useState<boolean[]>(
+    new Array(steps.length).fill(false)
+  );
 
   const validateStep = useCallback(
     (stepIndex: number, data: any) => {
@@ -135,262 +79,147 @@ const useSteppedModal = (
     [steps]
   );
 
-  const handleStepComplete = useCallback(
-    async (data: any) => {
-      setFormData((prev) => {
-        const newFormData = [...prev];
-        newFormData[currentStep] = { ...newFormData[currentStep], ...data };
-        return newFormData;
-      });
+  const handleFormChange = (stepData: any) => {
+    const newFormData = [...formData];
+    newFormData[currentStep] = stepData;
+    setFormData(newFormData);
 
-      setValidSteps((prev) => {
-        const newValidSteps = [...prev];
-        newValidSteps[currentStep] = true;
-        return newValidSteps;
-      });
+    // Update validation state for current step
+    const newValidSteps = [...validSteps];
+    newValidSteps[currentStep] = validateStep(currentStep, stepData);
+    setValidSteps(newValidSteps);
+  };
 
-      if (currentStep < steps.length - 1) {
-        setDirection(1);
-        setCurrentStep((prev) => prev + 1);
-      } else {
-        setIsLoading(true);
-        try {
-          const allData = formData.reduce(
-            (acc, curr) => ({ ...acc, ...curr }),
-            {}
-          );
-          await onSave({ ...allData, ...data });
-          resetModal();
-        } catch (error) {
-          console.error("Error saving data:", error);
-        } finally {
-          setIsLoading(false);
-        }
+  const handleNext = async (stepData: any) => {
+    const newFormData = [...formData];
+    newFormData[currentStep] = stepData;
+    setFormData(newFormData);
+
+    // Update validation state
+    const newValidSteps = [...validSteps];
+    newValidSteps[currentStep] = true;
+    setValidSteps(newValidSteps);
+
+    if (currentStep === steps.length - 1) {
+      setIsSubmitting(true);
+      try {
+        const mergedData = newFormData.reduce(
+          (acc, curr) => ({ ...acc, ...curr }),
+          {}
+        );
+        await onSave(mergedData);
+        handleClose();
+      } catch (error) {
+        console.error("Error saving form:", error);
+      } finally {
+        setIsSubmitting(false);
       }
-    },
-    [currentStep, steps.length, formData, onSave]
-  );
+    } else {
+      setDirection(1);
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
 
-  const handlePrevious = useCallback(() => {
+  const handlePrevious = () => {
     if (currentStep > 0) {
       setDirection(-1);
       setCurrentStep((prev) => prev - 1);
     }
-  }, [currentStep]);
-
-  const handleStepClick = useCallback(
-    (index: number) => {
-      if (index === 0 || validSteps.slice(0, index).every(Boolean)) {
-        setDirection(index > currentStep ? 1 : -1);
-        setCurrentStep(index);
-      }
-    },
-    [validSteps, currentStep]
-  );
-
-  return {
-    currentStep,
-    direction,
-    formData,
-    validSteps,
-    isLoading,
-    stepRefs,
-    resetModal,
-    validateStep,
-    handleStepComplete,
-    handlePrevious,
-    handleStepClick,
-    setFormData,
-    setValidSteps,
   };
-};
-
-// Components
-const StepButtons: React.FC<{
-  stepIndex: number;
-  totalSteps: number;
-  isLoading: boolean;
-  handlePrevious: () => void;
-  handleNext?: () => void;
-}> = ({ stepIndex, totalSteps, isLoading, handlePrevious, handleNext }) => (
-  <div className="flex justify-end mt-6">
-    {stepIndex > 0 && (
-      <Button
-        type="button"
-        onClick={handlePrevious}
-        variant="outline"
-        className="mr-auto"
-        disabled={isLoading}
-      >
-        <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
-        Geri
-      </Button>
-    )}
-    {handleNext ? (
-      <Button onClick={handleNext} disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <Icon name="UpdateIcon" className="w-4 h-4 mr-2 animate-spin" />
-            Kaydediliyor...
-          </>
-        ) : (
-          <>
-            İleri
-            <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
-          </>
-        )}
-      </Button>
-    ) : (
-      <AutoFormSubmit disabled={isLoading}>
-        {stepIndex === totalSteps - 1 ? (
-          <>
-            {isLoading ? (
-              <>
-                <Icon name="UpdateIcon" className="w-4 h-4 mr-2 animate-spin" />
-                Kaydediliyor...
-              </>
-            ) : (
-              <>
-                Kaydet
-                <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            İleri
-            <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
-          </>
-        )}
-      </AutoFormSubmit>
-    )}
-  </div>
-);
-
-const StepContent: React.FC<{
-  step: Step;
-  stepIndex: number;
-  totalSteps: number;
-  modalHook: ReturnType<typeof useSteppedModal>;
-}> = ({ step, stepIndex, totalSteps, modalHook }) => {
-  const {
-    handleStepComplete,
-    handlePrevious,
-    formData,
-    isLoading,
-    setFormData,
-    setValidSteps,
-    validateStep,
-  } = modalHook;
-
-  if (step.content.form) {
-    return (
-      <AutoForm
-        formSchema={step.content.form.schema}
-        onSubmit={handleStepComplete}
-        fieldConfig={step.content.form.fieldConfig}
-        dependencies={step.content.form.dependencies}
-        values={formData[stepIndex]}
-        onValuesChange={(values) => {
-          setFormData((prev) => {
-            const newFormData = [...prev];
-            newFormData[stepIndex] = { ...newFormData[stepIndex], ...values };
-            return newFormData;
-          });
-          setValidSteps((prev) => {
-            const newValidSteps = [...prev];
-            newValidSteps[stepIndex] = validateStep(stepIndex, values);
-            return newValidSteps;
-          });
-        }}
-      >
-        <StepButtons
-          stepIndex={stepIndex}
-          totalSteps={totalSteps}
-          isLoading={isLoading}
-          handlePrevious={handlePrevious}
-        />
-      </AutoForm>
-    );
-  }
-
-  if (step.content.content) {
-    return (
-      <>
-        {step.content.content}
-        <StepButtons
-          stepIndex={stepIndex}
-          totalSteps={totalSteps}
-          isLoading={isLoading}
-          handlePrevious={handlePrevious}
-          handleNext={() => handleStepComplete(formData[stepIndex])}
-        />
-      </>
-    );
-  }
-
-  return null;
-};
-
-// Main component
-export const SteppedModal: React.FC<SteppedModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  description,
-  steps,
-  onSave,
-  defaultValues = [],
-}) => {
-  const modalHook = useSteppedModal(steps, defaultValues, onSave);
-  const {
-    currentStep,
-    direction,
-    validSteps,
-    isLoading,
-    stepRefs,
-    resetModal,
-    handleStepClick,
-  } = modalHook;
 
   const handleClose = useCallback(() => {
     onClose();
-    resetModal();
-  }, [onClose, resetModal]);
+    setCurrentStep(0);
+    setDirection(0);
+    setFormData(defaultValues);
+    setIsSubmitting(false);
+    setValidSteps(new Array(steps.length).fill(false));
+  }, [onClose, defaultValues, steps.length]);
+
+  const renderStepContent = (step: Step) => {
+    if (step.content.form) {
+      return (
+        <FormBuilder
+          fields={step.content.form.fields}
+          onSubmit={handleNext}
+          onChange={handleFormChange}
+          defaultValues={formData[currentStep]}
+          isLoading={isSubmitting}
+        />
+      );
+    }
+
+    if (step.content.content) {
+      return (
+        <div className="space-y-6">
+          {step.content.content}
+          <div className="flex justify-end gap-4">
+            {currentStep > 0 && (
+              <Button onClick={handlePrevious} variant="outline">
+                <Icon name="ArrowLeftIcon" className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            )}
+            <Button
+              onClick={() => handleNext(formData[currentStep])}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Icon
+                    name="UpdateIcon"
+                    className="w-4 h-4 mr-2 animate-spin"
+                  />
+                  Saving...
+                </>
+              ) : currentStep === steps.length - 1 ? (
+                <>
+                  Save
+                  <Icon name="CheckCircledIcon" className="w-4 h-4 ml-2" />
+                </>
+              ) : (
+                <>
+                  Next
+                  <Icon name="ArrowRightIcon" className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]">
-        <Button
-          variant="ghost"
-          onClick={handleClose}
-          className="absolute right-4 top-4"
-          aria-label="Close dialog"
-          disabled={isLoading}
-        >
-          <Icon name="Cross1Icon" className="h-4 w-4" />
-        </Button>
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
-          <DialogDescription className="text-gray-500">
-            {description}
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+
         {steps.length > 1 && (
-          <nav aria-label="Progress">
-            <ol role="list" className="flex items-center">
+          <nav aria-label="Progress" className="mt-4 overflow-x-auto pb-4">
+            <ol role="list" className="flex min-w-full items-center">
               {steps.map((step, index) => (
                 <li
                   key={step.title}
                   className={`flex-1 ${
-                    index !== steps.length - 1 ? "pr-8 sm:pr-20" : ""
+                    index !== steps.length - 1 ? "pr-4 sm:pr-8" : ""
                   }`}
                 >
                   <Button
-                    onClick={() => handleStepClick(index)}
+                    onClick={() => {
+                      if (index < currentStep || validSteps[currentStep]) {
+                        setDirection(index > currentStep ? 1 : -1);
+                        setCurrentStep(index);
+                      }
+                    }}
                     disabled={
-                      isLoading ||
-                      (index > 0 && !validSteps.slice(0, index).every(Boolean))
+                      isSubmitting ||
+                      (index > currentStep && !validSteps[currentStep])
                     }
                     variant="ghost"
                     className={`flex items-center justify-start w-full space-x-2 ${
@@ -401,7 +230,7 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
                           : "text-gray-500"
                     }`}
                   >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-300">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-white border-2 border-gray-300 shrink-0">
                       {validSteps[index] ? (
                         <Icon
                           name="CheckIcon"
@@ -412,7 +241,7 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
                         <span className="text-sm font-medium">{index + 1}</span>
                       )}
                     </span>
-                    <span className="ml-4 text-sm font-medium">
+                    <span className="text-sm font-medium truncate">
                       {step.title}
                     </span>
                   </Button>
@@ -421,40 +250,24 @@ export const SteppedModal: React.FC<SteppedModalProps> = ({
             </ol>
           </nav>
         )}
-        <AnimatePresence mode="wait">
+
+        <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={currentStep}
-            variants={contentVariants}
-            initial="hidden"
-            animate="visible"
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
             exit="exit"
-            className="bg-gray-50 rounded-lg overflow-hidden"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+            }}
           >
-            <div className="p-6">
-              <motion.div
-                ref={(el) => (stepRefs.current[currentStep] = el)}
-                key={currentStep}
-                custom={direction}
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  x: { type: "spring", stiffness: 300, damping: 30 },
-                  opacity: { duration: 0.2 },
-                }}
-              >
-                <StepContent
-                  step={steps[currentStep]}
-                  stepIndex={currentStep}
-                  totalSteps={steps.length}
-                  modalHook={modalHook}
-                />
-              </motion.div>
-            </div>
+            {renderStepContent(steps[currentStep])}
           </motion.div>
         </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
-};
+}
